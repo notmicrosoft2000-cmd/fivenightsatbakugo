@@ -1,0 +1,176 @@
+:root{
+  --bg:#040404;
+  --bg-soft:#080808;
+  --panel:#0a0a0a;
+  --line:#1b1b1b;
+  --line-bright:#2a2a2a;
+  --text:#d6d6d6;
+  --dim:#5f5f5f;
+  --blue:#5a8cff;
+  --blue-dim:#14266b;
+  --red:#c80000;
+  --cyan:#00d8ff;
+  --mono:'Consolas', ui-monospace, monospace;
+  --vt:'VT323', ui-monospace, monospace;
+  --glow-blue:0 0 12px rgba(90,140,255,.4);
+  --glow-red:0 0 12px rgba(200,0,0,.4);
+  --glow-soft:0 0 24px rgba(0,0,0,.9);
+}
+
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+html,body{height:100%}
+body{
+  background:var(--bg);
+  color:var(--text);
+  font-family:var(--mono);
+  overflow:hidden;
+  overscroll-behavior:none;
+  touch-action:none;
+  -webkit-user-select:none;
+  user-select:none;
+  -webkit-font-smoothing:antialiased;
+}
+
+::selection{background:var(--blue);color:#000}
+
+img,svg{display:block;max-width:100%}
+a{color:inherit;text-decoration:none}
+button{font-family:inherit;background:none;border:none;color:inherit}
+
+.hidden{display:none!important}
+.red{color:var(--red)}
+
+.blink{animation:blink 1s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+
+@font-face{
+  font-family:'Consolas';
+  src:url('../assets/fonts/Consolas-Regular.ttf') format('truetype');
+  font-weight:400;
+}
+
+/* ---------- CRT overlays ---------- */
+.crt{position:fixed;inset:0;pointer-events:none;z-index:9950;animation:crt-flicker 6s linear infinite}
+@keyframes crt-flicker{
+  0%,100%{opacity:1}
+  6%{opacity:.95} 7%{opacity:1}
+  38%{opacity:.97} 39%{opacity:1}
+  71%{opacity:.93} 72%{opacity:1}
+}
+.crt .scanlines{
+  position:absolute;inset:0;
+  background:repeating-linear-gradient(to bottom,rgba(0,0,0,0) 0 2px,rgba(0,0,0,.26) 2px 4px);
+}
+.crt .vignette{
+  position:absolute;inset:0;
+  background:
+    radial-gradient(ellipse at center,transparent 55%,rgba(0,0,0,.6) 100%),
+    linear-gradient(rgba(90,140,255,.02),rgba(90,140,255,.02));
+  animation:vignette-breathe 7s ease-in-out infinite;
+}
+@keyframes vignette-breathe{
+  0%,100%{opacity:.55}
+  50%{opacity:1}
+}
+.crt .beam{
+  position:absolute;left:0;right:0;top:-24vh;height:22vh;
+  background:linear-gradient(to bottom,transparent,rgba(90,140,255,.05) 42%,rgba(90,140,255,.13) 50%,rgba(90,140,255,.05) 58%,transparent);
+  animation:beam 8s linear infinite;
+  will-change:transform;
+}
+@keyframes beam{0%{transform:translateY(0)}100%{transform:translateY(200vh)}}
+.crt .sweep{
+  position:absolute;left:0;right:0;top:-30vh;height:30vh;
+  background:linear-gradient(to bottom,transparent 0%,rgba(255,255,255,.02) 46%,rgba(255,255,255,.05) 50%,rgba(255,255,255,.02) 54%,transparent 100%);
+  animation:sweep 13s linear infinite;
+  will-change:transform;
+}
+@keyframes sweep{0%{transform:translateY(0)}100%{transform:translateY(160vh)}}
+#ash{position:absolute;inset:0;width:100%;height:100%;opacity:.6}
+#noise{position:absolute;inset:0;width:100%;height:100%;opacity:.55}
+.flash{
+  position:absolute;inset:0;background:rgba(200,0,0,.24);
+  opacity:0;pointer-events:none;
+}
+.flash.go{animation:redflash .18s ease-out}
+@keyframes redflash{0%{opacity:1}100%{opacity:0}}
+
+.crt.roll{animation:crt-roll .33s steps(6)}
+#staticBurst{
+  position:absolute;inset:0;width:100%;height:100%;
+  opacity:0;pointer-events:none;image-rendering:pixelated;
+  mix-blend-mode:screen;
+}
+@keyframes crt-roll{0%{transform:translateY(0)}100%{transform:translateY(16vh)}}
+
+/* ---------- Fixed HUD ---------- */
+.hud{
+  position:fixed;z-index:9960;font-family:var(--vt);font-size:1.05rem;
+  letter-spacing:.08em;color:var(--dim);pointer-events:none;
+  text-shadow:0 0 8px rgba(0,0,0,.9);
+}
+.hud-tl{top:.8rem;left:1rem}
+.hud-tr{top:.8rem;right:1rem;text-align:right}
+.hud-bl{bottom:.7rem;left:1rem}
+.hud-br{bottom:.7rem;right:1rem}
+.rec-dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:var(--red);box-shadow:var(--glow-red);animation:blink 1.6s steps(1) infinite;margin-right:.35rem;vertical-align:1px}
+.sig{color:var(--blue);text-shadow:var(--glow-blue)}
+.sig-bad{color:var(--red);text-shadow:var(--glow-red)}
+
+/* ---------- Boot ---------- */
+#boot{
+  position:fixed;inset:0;background:#000;z-index:9995;
+  display:flex;align-items:center;justify-content:center;
+  transition:opacity .9s ease;
+}
+#boot.done{opacity:0;pointer-events:none}
+.boot-inner{width:min(720px,90vw);padding:2rem}
+.boot-log{
+  font-family:var(--vt);font-size:clamp(1.15rem,2.4vw,1.6rem);
+  color:#cfcfcf;line-height:1.75;white-space:pre-wrap;min-height:2.5em;
+  text-shadow:0 0 8px rgba(90,140,255,.2);
+}
+.boot-prompt{
+  font-family:var(--vt);font-size:1.35rem;color:var(--blue);
+  text-shadow:var(--glow-blue);margin-top:2rem;
+  animation:blink 1s steps(1) infinite;
+}
+.boot-skip{position:absolute;bottom:1.5rem;left:50%;transform:translateX(-50%);color:#2a2a2a;font-family:var(--vt);font-size:1rem;letter-spacing:.2em}
+
+/* ---------- Game stage ---------- */
+#stage{
+  position:fixed;top:50%;left:50%;
+  transform:translate(-50%,-50%);
+  z-index:10;
+  background:#000;
+}
+#game{
+  width:100%;height:100%;
+  display:block;
+  image-rendering:auto;
+}
+#duotone{
+  position:absolute;inset:0;pointer-events:none;
+  opacity:0;
+  mix-blend-mode:multiply;
+  background:linear-gradient(165deg,rgba(2,4,18,.92) 0%,rgba(45,70,140,.6) 45%,rgba(90,140,255,.55) 100%);
+  transition:opacity .35s ease;
+}
+body.state-menu #stage{filter:saturate(.72) contrast(1.07)}
+body.state-menu #duotone{opacity:.5}
+body.state-office #stage{filter:none}
+body.state-office #duotone{opacity:0}
+
+/* ---------- Responsive ---------- */
+@media(max-width:600px){
+  .hud{font-size:.85rem}
+  .hud-bl,.hud-br{display:none}
+}
+@media(pointer:coarse){
+  .hud-tr{display:none}
+}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001s!important;animation-iteration-count:1!important;transition-duration:.01s!important}
+  .crt .beam{display:none}
+}

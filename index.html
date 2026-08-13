@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="description" content="BAKUGO'S LOCATION — a Five Nights at Bakugo's-inspired horror experience by Neptune Productions.">
+  <meta name="theme-color" content="#000000">
+  <title>BAKUGO'S LOCATION — by Neptune Productions</title>
+  <link rel="icon" type="image/png" href="assets/images/char_bakugo.png">
+  <link rel="apple-touch-icon" href="assets/images/char_bakugo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+  <div class="crt" aria-hidden="true">
+    <div class="scanlines"></div>
+    <div class="vignette"></div>
+    <div class="beam"></div>
+    <div class="sweep"></div>
+    <canvas id="ash"></canvas>
+    <canvas id="noise"></canvas>
+    <div class="flash"></div>
+  </div>
+
+  <div class="hud hud-tl" aria-hidden="true"><span class="rec-dot"></span> REC&nbsp;<span id="recTime">00:00:00</span></div>
+  <div class="hud hud-tr" aria-hidden="true">SIGNAL: <span class="sig" id="sigStatus">STABLE</span></div>
+  <div class="hud hud-bl" aria-hidden="true">BAKUGO'S LOCATION v1.0</div>
+  <div class="hud hud-br" aria-hidden="true">NEPTUNE PRODUCTIONS [C]</div>
+
+  <div id="boot" aria-hidden="true">
+    <div class="boot-inner">
+      <div class="boot-log" id="bootLog"></div>
+      <div class="boot-prompt hidden" id="bootPrompt">&gt; [ CLICK TO BEGIN ]</div>
+    </div>
+  </div>
+
+  <div id="stage">
+    <canvas id="game" width="960" height="540"></canvas>
+    <div id="duotone" aria-hidden="true"></div>
+  </div>
+
+  <audio id="menuAudio" src="assets/audio/menu.ogg" loop preload="auto"></audio>
+  <audio id="cutsceneAudio" src="assets/audio/cutscene.ogg" preload="auto"></audio>
+
+  <script src="js/config.js"></script>
+  <script src="js/fx.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>
