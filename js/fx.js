@@ -9,7 +9,7 @@
       const tick = () => {
         if (i < text.length) {
           el.textContent = text.slice(0, ++i);
-          setTimeout(tick, speed);
+          setTimeout(tick, speed + (Math.random() < 0.2 ? 26 : 0));
         } else {
           res();
         }
@@ -22,6 +22,7 @@
     return new Promise((r) => setTimeout(r, ms));
   }
 
+  /* ---------- analog grain ---------- */
   const noiseCnv = $("#noise");
   let noiseCtx = null;
   function sizeNoise() {
@@ -29,48 +30,50 @@
     noiseCnv.width = Math.max(1, Math.floor(window.innerWidth / 2));
     noiseCnv.height = Math.max(1, Math.floor(window.innerHeight / 2));
   }
-  let noiseFrame = 0;
   function frameNoise() {
     if (noiseCtx) {
       const w = noiseCnv.width, h = noiseCnv.height;
-      const img = noiseCtx.createImageData(w, h);
-      const d = img.data;
-      for (let i = 0; i < d.length; i += 4) {
+      noiseCtx.clearRect(0, 0, w, h);
+      const tiles = 80 + ((Math.random() * 50) | 0);
+      for (let i = 0; i < tiles; i++) {
+        const bw = 2 + ((Math.random() * 10) | 0);
+        const bh = 2 + ((Math.random() * 8) | 0);
         const v = (Math.random() * 255) | 0;
-        d[i] = v; d[i + 1] = v; d[i + 2] = v; d[i + 3] = 22;
+        noiseCtx.fillStyle = "rgba(" + v + "," + v + "," + v + ",0.16)";
+        noiseCtx.fillRect(Math.random() * w, Math.random() * h, bw, bh);
       }
-      noiseCtx.putImageData(img, 0, 0);
-      noiseFrame++;
-      if (noiseFrame % 9 === 0) {
-        noiseCtx.fillStyle = "rgba(255,255,255,0.05)";
-        noiseCtx.fillRect(0, Math.random() * h, w, 2 + Math.random() * 8);
+      if (Math.random() < 0.5) {
+        const bandY = Math.random() * h;
+        noiseCtx.fillStyle = "rgba(255,255,255,0.07)";
+        noiseCtx.fillRect(0, bandY, w, 1 + ((Math.random() * 4) | 0));
       }
     }
-    setTimeout(frameNoise, document.hidden ? 400 : 100);
+    setTimeout(frameNoise, document.hidden ? 400 : 90);
   }
   window.addEventListener("resize", sizeNoise);
 
+  /* ---------- drifting soot ---------- */
   const ashCnv = $("#ash");
   let ashCtx = null;
   let ashParticles = [];
+  function makeSoot(w, h, spread) {
+    return {
+      x: Math.random() * w,
+      y: spread ? Math.random() * h : h + 8,
+      vx: (Math.random() - 0.5) * 0.5,
+      vy: -(0.12 + Math.random() * 0.38),
+      sway: 0.6 + Math.random() * 1.5,
+      phase: Math.random() * 6.2832,
+      size: 0.6 + Math.random() * 1.7,
+      ember: Math.random() < 0.13,
+    };
+  }
   function sizeAsh() {
     if (!ashCnv) return;
     ashCnv.width = Math.max(1, Math.floor(window.innerWidth / 2));
     ashCnv.height = Math.max(1, Math.floor(window.innerHeight / 2));
-    const w = ashCnv.width, h = ashCnv.height;
     ashParticles = [];
-    for (let i = 0; i < 40; i++) {
-      ashParticles.push({
-        x: Math.random() * w,
-        y: Math.random() * h,
-        vx: (Math.random() - 0.5) * 0.3,
-        vy: -0.15 - Math.random() * 0.3,
-        size: Math.random() < 0.6 ? 1 : (Math.random() < 0.5 ? 1.5 : 2),
-        phase: Math.random() * 6.28,
-        b: 30 + Math.random() * 70,
-        red: Math.random() < 0.16,
-      });
-    }
+    for (let i = 0; i < 36; i++) ashParticles.push(makeSoot(ashCnv.width, ashCnv.height, true));
   }
   function frameAsh() {
     if (ashCtx && !document.hidden) {
@@ -79,21 +82,30 @@
       const t = performance.now() / 1000;
       for (let i = 0; i < ashParticles.length; i++) {
         const p = ashParticles[i];
-        p.x += p.vx;
+        p.x += p.vx + Math.sin(t * p.sway + p.phase) * 0.35;
         p.y += p.vy;
-        if (p.y < -4) { p.y = h + 4; p.x = Math.random() * w; }
-        if (p.x < -4) p.x = w + 4;
-        if (p.x > w + 4) p.x = -4;
-        const tw = 0.5 + 0.5 * Math.sin(t * 2.2 + p.phase);
-        const b = Math.max(8, Math.min(200, p.b * (0.5 + 0.5 * tw))) | 0;
-        ashCtx.fillStyle = p.red ? ("rgb(" + b + "," + (b * 0.55 | 0) + "," + (b * 0.55 | 0) + ")") : ("rgb(" + b + "," + b + "," + b + ")");
-        ashCtx.fillRect(p.x, p.y, p.size, p.size);
+        if (p.y < -6) { ashParticles[i] = makeSoot(w, h, false); continue; }
+        if (p.x < -6) p.x = w + 6;
+        else if (p.x > w + 6) p.x = -6;
+        const pulse = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(t * 1.8 + p.phase * 2));
+        const r = Math.round((p.ember ? 255 : 200) * pulse);
+        const g = Math.round((p.ember ? 150 : 200) * pulse);
+        const b = Math.round((p.ember ? 95 : 218) * pulse);
+        const rad = p.size * 3;
+        const grad = ashCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, rad);
+        grad.addColorStop(0, "rgba(" + r + "," + g + "," + b + ",0.9)");
+        grad.addColorStop(1, "rgba(" + r + "," + g + "," + b + ",0)");
+        ashCtx.fillStyle = grad;
+        ashCtx.beginPath();
+        ashCtx.arc(p.x, p.y, rad, 0, 6.2832);
+        ashCtx.fill();
       }
     }
     requestAnimationFrame(frameAsh);
   }
   window.addEventListener("resize", sizeAsh);
 
+  /* ---------- event flash ---------- */
   const flashEl = $(".flash");
   function redFlash() {
     if (!flashEl) return;
@@ -102,6 +114,7 @@
     flashEl.classList.add("go");
   }
 
+  /* ---------- static burst overlay ---------- */
   let burstCnv = null;
   let burstCtx = null;
   let burstTimer = null;
@@ -112,29 +125,37 @@
       document.querySelector(".crt").appendChild(burstCnv);
       burstCtx = burstCnv.getContext("2d");
     }
-    const w = Math.floor(window.innerWidth / 2);
-    const h = Math.floor(window.innerHeight / 2);
+    const w = Math.max(1, Math.floor(window.innerWidth / 2));
+    const h = Math.max(1, Math.floor(window.innerHeight / 2));
     if (burstCnv.width !== w || burstCnv.height !== h) {
       burstCnv.width = w;
       burstCnv.height = h;
     }
+    if (burstCtx) {
+      burstCtx.clearRect(0, 0, w, h);
+      const bands = Math.max(8, Math.floor(h / 3));
+      for (let y = 0; y < h; y += 3) {
+        const v = (Math.random() * 255) | 0;
+        const skew = ((Math.random() * 40) | 0) - 20;
+        burstCtx.fillStyle = "rgba(" + v + "," + v + "," + v + ",0.55)";
+        burstCtx.fillRect(skew, y, w, 1);
+      }
+      const splats = 90;
+      for (let i = 0; i < splats; i++) {
+        const v = (Math.random() * 255) | 0;
+        burstCtx.fillStyle = "rgba(" + v + "," + v + "," + v + ",0.4)";
+        burstCtx.fillRect(Math.random() * w, Math.random() * h, 2 + ((Math.random() * 8) | 0), 2 + ((Math.random() * 8) | 0));
+      }
+    }
     burstCnv.style.opacity = "1";
     burstCnv.classList.add("go");
-    if (burstCtx) {
-      const img = burstCtx.createImageData(w, h);
-      const d = img.data;
-      for (let i = 0; i < d.length; i += 4) {
-        const v = (Math.random() * 255) | 0;
-        d[i] = v; d[i + 1] = v; d[i + 2] = v; d[i + 3] = 255;
-      }
-      burstCtx.putImageData(img, 0, 0);
-    }
     clearTimeout(burstTimer);
     burstTimer = setTimeout(() => {
       burstCnv.style.opacity = "0";
     }, ms || 90);
   }
 
+  /* ---------- screen roll ---------- */
   function crtRoll() {
     const crt = $(".crt");
     if (crt) {

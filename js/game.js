@@ -322,6 +322,9 @@
       fx.initNoise();
       fx.initAsh();
 
+      cutsceneAudio.load();
+      menuAudio.load();
+
       stage.addEventListener("pointermove", (e) => {
         logical = toLogical(e);
         if (e.pointerType === "mouse") hoverIndex = game.menuHoverIndex(logical);
@@ -377,6 +380,21 @@
       window.addEventListener("keydown", onKey);
       boot.addEventListener("pointerdown", onClick);
 
+      const gateAudio = saveData.hasSeenIntro ? menuAudio : cutsceneAudio;
+      const audioReady = new Promise((res) => {
+        let settled = false;
+        const ok = () => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          gateAudio.removeEventListener("canplay", ok);
+          res();
+        };
+        const timer = setTimeout(ok, 6000);
+        if (gateAudio.readyState >= 2) ok();
+        else gateAudio.addEventListener("canplay", ok);
+      });
+
       (async () => {
         const skipHint = document.createElement("div");
         skipHint.className = "boot-skip";
@@ -391,7 +409,12 @@
           await fx.sleep(180);
           if (!bootLog.contains(skipHint)) bootLog.appendChild(skipHint);
         }
-        if (!finished) bootPrompt.classList.remove("hidden");
+        if (finished) return;
+        bootPrompt.textContent = "> LOADING AUDIO ...";
+        bootPrompt.classList.remove("hidden");
+        await audioReady;
+        if (finished) return;
+        bootPrompt.textContent = "> [ CLICK TO BEGIN ]";
       })();
     },
 
@@ -432,7 +455,15 @@
       body.className = "state-menu";
       this.overlay = null;
       this.menuTarget = 0.8;
-      if (menuAudio.paused) menuAudio.play().catch(() => {});
+      if (menuAudio.paused) this.playMenuAudio();
+    },
+
+    playMenuAudio() {
+      const p = menuAudio.play();
+      if (p && p.catch) p.catch(() => {
+        const retry = () => { if (this.state === "menu") menuAudio.play().catch(() => {}); };
+        window.addEventListener("pointerdown", retry, { once: true });
+      });
     },
 
     gotoOffice() {
@@ -450,7 +481,7 @@
       this.cutscene.charName = this.flasher.weightedPool[Math.floor(Math.random() * this.flasher.weightedPool.length)];
       cutsceneAudio.currentTime = 0;
       cutsceneAudio.volume = 1;
-      cutsceneAudio.play().catch(() => {});
+      this.playCutsceneAudio();
       if (cfg.CUTSCENE_ECHO_ENABLED) {
         for (let i = 1; i <= cfg.CUTSCENE_ECHO_TAPS; i++) {
           const echo = new Audio(cfg.CUTSCENE_AUDIO);
@@ -458,6 +489,18 @@
           setTimeout(() => { echo.play().catch(() => {}); }, i * cfg.CUTSCENE_ECHO_DELAY * 1000);
         }
       }
+    },
+
+    playCutsceneAudio() {
+      const p = cutsceneAudio.play();
+      if (p && p.catch) p.catch(() => {
+        const retry = () => {
+          if (this.state === "cutscene" || this.state === "menu") {
+            cutsceneAudio.play().catch(() => {});
+          }
+        };
+        window.addEventListener("pointerdown", retry, { once: true });
+      });
     },
 
     finishCutscene() {
