@@ -365,6 +365,7 @@
         boot.removeEventListener("pointerdown", onClick);
         boot.classList.add("done");
         document.body.classList.add("loaded");
+        this.primeAudio();
         this.startRecTimer();
         this.startAmbient();
         if (saveData.hasSeenIntro) {
@@ -458,12 +459,32 @@
       if (menuAudio.paused) this.playMenuAudio();
     },
 
+    primeAudio() {
+      const el = saveData.hasSeenIntro ? menuAudio : cutsceneAudio;
+      el.muted = false;
+      el.volume = 1;
+      const p = el.play();
+      if (p && p.catch) p.catch(() => {});
+      el.pause();
+    },
+
+    setAudioStatus(label, ok) {
+      const el = $("#audioStatus");
+      if (!el) return;
+      el.textContent = label;
+      el.classList.toggle("sig", ok);
+      el.classList.toggle("sig-bad", !ok);
+    },
+
     playMenuAudio() {
       const p = menuAudio.play();
-      if (p && p.catch) p.catch(() => {
-        const retry = () => { if (this.state === "menu") menuAudio.play().catch(() => {}); };
-        window.addEventListener("pointerdown", retry, { once: true });
-      });
+      if (p && p.catch) {
+        p.then(() => this.setAudioStatus("ON", true)).catch(() => {
+          this.setAudioStatus("BLOCKED", false);
+          const retry = () => { if (this.state === "menu") this.playMenuAudio(); };
+          window.addEventListener("pointerdown", retry, { once: true });
+        });
+      }
     },
 
     gotoOffice() {
@@ -493,14 +514,15 @@
 
     playCutsceneAudio() {
       const p = cutsceneAudio.play();
-      if (p && p.catch) p.catch(() => {
-        const retry = () => {
-          if (this.state === "cutscene" || this.state === "menu") {
-            cutsceneAudio.play().catch(() => {});
-          }
-        };
-        window.addEventListener("pointerdown", retry, { once: true });
-      });
+      if (p && p.catch) {
+        p.then(() => this.setAudioStatus("ON", true)).catch(() => {
+          this.setAudioStatus("BLOCKED", false);
+          const retry = () => {
+            if (this.state === "cutscene" || this.state === "menu") this.playCutsceneAudio();
+          };
+          window.addEventListener("pointerdown", retry, { once: true });
+        });
+      }
     },
 
     finishCutscene() {
@@ -693,56 +715,147 @@
     },
 
     _drawMenu() {
-      this.flasher.draw();
-
-      const items = cfg.MENU_ITEMS;
-      const pulse = (Math.sin(this.t * cfg.MENU_PULSE_SPEED * Math.PI) + 1) / 2;
-      ctx.font = "bold " + cfg.MENU_FONT_SIZE + "px Consolas, monospace";
-      ctx.textBaseline = "top";
-
-      for (let i = 0; i < items.length; i++) {
-        const selected = (hoverIndex === i) || (this.overlay === null && this.menuSelected === i && hoverIndex < 0);
-        const color = selected ? cfg.TEXT_COLOR_SELECTED : cfg.TEXT_COLOR;
-        const label = (selected ? "> " : "  ") + items[i];
-        const x = cfg.MENU_ANCHOR_X;
-        const y = cfg.MENU_ANCHOR_Y + i * cfg.MENU_LINE_SPACING;
-
-        ctx.shadowColor = "rgb(" + cfg.GLOW_COLOR.join(",") + ")";
-        ctx.shadowBlur = selected ? 10 : 5;
-        if (selected) ctx.globalAlpha = (200 + pulse * 55) / 255;
-
-        ctx.fillStyle = "rgb(" + color.join(",") + ")";
-        ctx.fillText(label, x, y);
-
-        ctx.globalAlpha = 1;
-        ctx.shadowBlur = 0;
-      }
-
+      this._drawMenuPortrait();
+      this._drawMenuTracking();
+      this._drawMenuItems();
       this._drawTitle();
       if (this.overlay) this._drawOverlay();
     },
 
+    _drawMenuPortrait() {
+      const img = images["char_" + this.flasher.currentName];
+      if (!img) return;
+      const ph = RH * 1.35;
+      const pw = img.width * (ph / img.height);
+      const x = Math.max(0, RW * 0.28 - pw / 2);
+      const y = RH * 0.42 - ph * 0.33;
+
+      ctx.save();
+      ctx.drawImage(img, x, y, pw, ph);
+
+      ctx.globalCompositeOperation = "screen";
+      const spot = ctx.createRadialGradient(x + pw * 0.5, y + ph * 0.3, 0, x + pw * 0.5, y + ph * 0.3, pw * 0.9);
+      spot.addColorStop(0, "rgba(110,150,255,0.5)");
+      spot.addColorStop(0.4, "rgba(50,80,190,0.16)");
+      spot.addColorStop(1, "rgba(0,0,0,0)");
+      ctx.fillStyle = spot;
+      ctx.fillRect(x, y, pw, ph);
+      ctx.globalCompositeOperation = "source-over";
+
+      ctx.globalCompositeOperation = "multiply";
+      ctx.fillStyle = "rgba(24,34,84,0.55)";
+      ctx.fillRect(x, y, pw, ph);
+      ctx.globalCompositeOperation = "source-over";
+
+      const crush = ctx.createLinearGradient(0, y + ph * 0.55, 0, y + ph);
+      crush.addColorStop(0, "rgba(0,0,0,0)");
+      crush.addColorStop(1, "rgba(0,0,0,0.95)");
+      ctx.fillStyle = crush;
+      ctx.fillRect(x, y, pw, ph);
+      ctx.restore();
+    },
+
+    _drawMenuTracking() {
+      const t = this.t;
+      const lineY = RH * 0.42 + Math.sin(t * 2.3) * 6;
+      ctx.save();
+      ctx.shadowColor = "rgb(190,160,255)";
+      ctx.shadowBlur = 24;
+      ctx.fillStyle = "rgba(200,170,255,0.95)";
+      ctx.fillRect(0, lineY - 1, RW, 2);
+      ctx.shadowBlur = 8;
+      ctx.fillStyle = "rgba(200,170,255,0.5)";
+      ctx.fillRect(0, lineY + 2, RW, 3);
+      ctx.restore();
+
+      for (let i = 0; i < 3; i++) {
+        const by = (RH * 0.5 + i * 92 + t * 16) % RH;
+        const bh = 24 + ((i * 41) % 26);
+        ctx.fillStyle = "rgba(5,9,38,0.55)";
+        ctx.fillRect(0, by, RW, bh);
+      }
+    },
+
+    _drawMenuItems() {
+      const items = cfg.MENU_ITEMS;
+      const pulse = (Math.sin(this.t * cfg.MENU_PULSE_SPEED * Math.PI) + 1) / 2;
+      ctx.font = "bold " + cfg.MENU_FONT_SIZE + "px Consolas, monospace";
+      ctx.textBaseline = "top";
+      const dim = [0.4, 1, 0.5];
+
+      for (let i = 0; i < items.length; i++) {
+        const selected = (hoverIndex === i) || (this.overlay === null && this.menuSelected === i && hoverIndex < 0);
+        const label = (selected ? "> " : "  ") + items[i];
+        const x = cfg.MENU_ANCHOR_X;
+        const y = cfg.MENU_ANCHOR_Y + i * cfg.MENU_LINE_SPACING;
+
+        if (selected) {
+          ctx.shadowColor = "rgb(" + cfg.GLOW_COLOR.join(",") + ")";
+          ctx.shadowBlur = 12;
+          ctx.globalAlpha = (200 + pulse * 55) / 255;
+          ctx.fillStyle = "rgb(" + cfg.TEXT_COLOR_SELECTED.join(",") + ")";
+        } else {
+          const k = dim[i];
+          ctx.shadowColor = "rgba(90,140,255," + (0.2 + k * 0.3).toFixed(2) + ")";
+          ctx.shadowBlur = 6;
+          ctx.globalAlpha = 1;
+          ctx.fillStyle = "rgb(" + Math.round(150 * k) + "," + Math.round(190 * k) + "," + Math.round(255 * k) + ")";
+        }
+        ctx.fillText(label, x, y);
+        ctx.globalAlpha = 1;
+        ctx.shadowBlur = 0;
+      }
+    },
+
     _drawTitle() {
       const text = cfg.TITLE;
-      ctx.font = "bold " + cfg.TITLE_FONT_SIZE + "px Consolas, monospace";
+      const size = cfg.TITLE_FONT_SIZE;
+      const t = this.t;
+      ctx.font = "bold " + size + "px Consolas, monospace";
       ctx.textBaseline = "alphabetic";
-      let total = 0;
-      for (const ch of text) total += ctx.measureText(ch).width;
-      let x = (RW - total) / 2;
 
-      for (let i = 0; i < text.length; i++) {
-        const ch = text[i];
-        const w = ctx.measureText(ch).width;
-        const phase = i * 0.9 + this.t * cfg.TITLE_SWAY_SPEED;
-        const dx = Math.sin(phase) * cfg.TITLE_SWAY_X_PX;
-        const dy = Math.cos(phase * 0.8) * cfg.TITLE_SWAY_Y_PX;
-        ctx.shadowColor = "rgb(" + cfg.GLOW_COLOR.join(",") + ")";
-        ctx.shadowBlur = 8;
-        ctx.fillStyle = "rgb(" + cfg.TEXT_COLOR_SELECTED.join(",") + ")";
-        ctx.fillText(ch, x + dx, cfg.TITLE_ANCHOR_Y + dy);
-        x += w;
+      const spacing = size * 0.62 + Math.sin(t * cfg.TITLE_SWAY_SPEED) * size * 0.09;
+      const baseY = cfg.TITLE_ANCHOR_Y;
+      const glowPulse = 6 + 5 * (0.5 + 0.5 * Math.sin(t * 2.1));
+
+      const widths = [];
+      let total = 0;
+      for (const ch of text) {
+        const w = ctx.measureText(ch).width * (ch === "'" ? 0.7 : 1);
+        widths.push(w);
+        total += w;
       }
-      ctx.shadowBlur = 0;
+      total += spacing * (text.length - 1);
+      const startX = (RW - total) / 2;
+
+      const drawLetters = (color, offX, alpha) => {
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = color;
+        ctx.shadowBlur = 0;
+        let x = startX;
+        for (let i = 0; i < text.length; i++) {
+          const dy = Math.sin(t * 1.3 + i * 0.7) * 2;
+          ctx.fillText(text[i], x + offX, baseY + dy);
+          x += widths[i] + spacing;
+        }
+        ctx.restore();
+      };
+
+      drawLetters("rgba(255,40,60,0.4)", cfg.CHROMA_ABERRATION_PX, 1);
+      drawLetters("rgba(40,200,255,0.4)", -cfg.CHROMA_ABERRATION_PX, 1);
+
+      ctx.save();
+      ctx.shadowColor = "rgb(160,130,255)";
+      ctx.shadowBlur = glowPulse;
+      ctx.fillStyle = "rgb(" + cfg.TEXT_COLOR_SELECTED.join(",") + ")";
+      let x = startX;
+      for (let i = 0; i < text.length; i++) {
+        const dy = Math.sin(t * 1.3 + i * 0.7) * 2;
+        ctx.fillText(text[i], x, baseY + dy);
+        x += widths[i] + spacing;
+      }
+      ctx.restore();
       ctx.textBaseline = "top";
     },
 

@@ -181,10 +181,18 @@ body.state-menu #duotone{opacity:.5}
 body.state-office #stage{filter:none}
 body.state-office #duotone{opacity:0}
 
+/* Office is a clean feed: strip all VHS overlay layers while playing */
+body.state-office .crt{animation:none}
+body.state-office .crt .scanlines,
+body.state-office .crt .vignette,
+body.state-office .crt .raster,
+body.state-office #noise,
+body.state-office #ash{opacity:0}
+
 /* ---------- Responsive ---------- */
 @media(max-width:600px){
   .hud{font-size:.8rem}
-  .hud-bl,.hud-br{display:none}
+  .hud-br{display:none}
 }
 @media(pointer:coarse){
   .hud-tr{display:none}

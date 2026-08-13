@@ -23,7 +23,7 @@
 
   <div class="hud hud-tl" aria-hidden="true"><span class="rec-dot"></span> REC&nbsp;<span id="recTime">00:00:00</span></div>
   <div class="hud hud-tr" aria-hidden="true">SIGNAL: <span class="sig" id="sigStatus">STABLE</span></div>
-  <div class="hud hud-bl" aria-hidden="true">BAKUGO'S LOCATION v1.0</div>
+  <div class="hud hud-bl" aria-hidden="true">AUDIO: <span class="sig" id="audioStatus">INIT</span></div>
   <div class="hud hud-br" aria-hidden="true">NEPTUNE PRODUCTIONS [C]</div>
 
   <div id="boot" aria-hidden="true">
@@ -38,8 +38,8 @@
     <div id="duotone" aria-hidden="true"></div>
   </div>
 
-  <audio id="menuAudio" src="assets/audio/menu.ogg" loop preload="auto"></audio>
-  <audio id="cutsceneAudio" src="assets/audio/cutscene.ogg" preload="auto"></audio>
+  <audio id="menuAudio" src="assets/audio/menu.ogg" loop preload="auto" playsinline webkit-playsinline></audio>
+  <audio id="cutsceneAudio" src="assets/audio/cutscene.ogg" preload="auto" playsinline webkit-playsinline></audio>
 
   <script src="js/config.js"></script>
   <script src="js/fx.js"></script>
